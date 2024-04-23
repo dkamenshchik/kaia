@@ -57,6 +57,10 @@ def create_menu(streak_tracker: StreakTracker):
         (lambda task_local=task: update_streak(task_local, streak_tracker)),
         True)
         for task in streak_tracker.get_tasks()]
+    menu_items.append(FunctionalMenuItem(
+        'Print streaks',
+        lambda: (yield os.linesep.join([f'{task.description}: {task.streak}' for task in streak_tracker.get_tasks()])),
+        True))
 
     return MenuFolder('Streak').items(*menu_items)
 
