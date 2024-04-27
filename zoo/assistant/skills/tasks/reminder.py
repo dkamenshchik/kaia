@@ -45,10 +45,10 @@ class ReminderList:
         self.time_provider = time_provider
 
     @staticmethod
-    def with_presets():
+    def with_presets(file_path: str):
         time_provider = TimeProvider()
         reminders = []
-        with open(os.environ["REMINDERS_PATH"], 'r') as file:
+        with open(file_path, 'r') as file:
             for line in file:
                 message, times = line.strip().split(';')
                 times = times.split(',')

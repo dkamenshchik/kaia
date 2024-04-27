@@ -7,10 +7,10 @@ from zoo.assistant.skills.tasks.streak_tracker import StreakTracker, Task
 
 
 def main():
-    reminder = ReminderList.with_presets()
-    streak_tracker = StreakTracker([])
-    streak_tracker.load_from_file()
     context = yield ContextRequest()
+    reminder = ReminderList.with_presets(f"{os.environ.get('REMINDERS_PATH')}_{context.user_id}.csv")
+    streak_tracker = StreakTracker([])
+    streak_tracker.load_from_file(get_streak_file_path(context.user_id))
     timer_state = False
     menu_aut = None  # type: Optional[Automaton]
     yield 'This bot will send you reminders. Enter /toggle to pause/resume, or /streak to open streak menu.'
@@ -30,7 +30,7 @@ def main():
             continue
 
         if input == '/streak':
-            menu_aut = Automaton(create_menu(streak_tracker), context)
+            menu_aut = Automaton(create_menu(streak_tracker, context.user_id), context)
 
         if menu_aut is not None:
             result = menu_aut.process(input)
@@ -45,16 +45,16 @@ def main():
         input = yield Listen()
 
 
-def update_streak(task, streak_tracker: StreakTracker):
+def update_streak(task, streak_tracker: StreakTracker, user_id: str):
     new_streak = streak_tracker.recalculate_streak(task.id)
-    streak_tracker.save_to_file()
+    streak_tracker.save_to_file(get_streak_file_path(user_id))
     yield f'{task.description} streak is {new_streak}'
 
 
-def create_menu(streak_tracker: StreakTracker):
+def create_menu(streak_tracker: StreakTracker, user_id: str):
     menu_items = [FunctionalMenuItem(
         f'{task.description}: {task.streak}',
-        (lambda task_local=task: update_streak(task_local, streak_tracker)),
+        (lambda task_local=task: update_streak(task_local, streak_tracker, user_id)),
         True)
         for task in streak_tracker.get_tasks()]
     menu_items.append(FunctionalMenuItem(
@@ -63,6 +63,10 @@ def create_menu(streak_tracker: StreakTracker):
         True))
 
     return MenuFolder('Streak').items(*menu_items)
+
+
+def get_streak_file_path(user_id: str):
+    return f"{os.environ.get('STREAK_TRACKER_PATH')}_{user_id}.csv"
 
 
 bot = Bot("timer2", Authorize('KAIA_TEST_BOT_CHAT_ID', main), timer=True, timer_interval=60)

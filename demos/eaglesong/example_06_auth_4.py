@@ -26,9 +26,9 @@ class Authorize:
 
         if self.env_variable not in os.environ:
             yield Terminate(f'Please add `{self.env_variable}` environment variable. Your id is {user_id}')
-        allowed_user_id = int(os.environ[self.env_variable])
+        allowed_user_ids = [int(id) for id in os.environ[self.env_variable].split(',')]
 
-        if user_id != allowed_user_id:
+        if user_id not in allowed_user_ids:
             raise Terminate(f'User {user_id} is not authorized')
 
         yield from self.inner_routine()

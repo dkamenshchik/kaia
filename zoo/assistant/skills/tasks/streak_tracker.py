@@ -1,8 +1,7 @@
 import csv
+import datetime
 import os
 from typing import List
-import datetime
-import json
 
 
 class Task:
@@ -42,16 +41,14 @@ class StreakTracker:
             self.tasks[task_id] = new_task
             return new_task.streak
 
-    def save_to_file(self, filename: str = None):
-        filename = filename or os.environ.get('STREAK_TRACKER_PATH')
+    def save_to_file(self, filename: str):
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['id', 'description', 'dates'])
             for task in self.get_tasks():
                 writer.writerow([task.id, task.description, ';'.join(map(str, task.dates))])
 
-    def load_from_file(self, filename: str = None):
-        filename = filename or os.environ.get('STREAK_TRACKER_PATH')
+    def load_from_file(self, filename: str):
         with open(filename, 'r') as f:
             reader = csv.reader(f)
             next(reader)
