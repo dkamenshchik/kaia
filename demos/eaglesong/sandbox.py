@@ -2,13 +2,13 @@ from demos.eaglesong.common import *
 from demos.eaglesong.example_06_auth_4 import Authorize
 from kaia.eaglesong.amenities import menu
 from kaia.eaglesong.amenities.menu import ValueMenuItem, FunctionalMenuItem, MenuFolder
-from zoo.assistant.skills.tasks.reminder import ReminderList
+from zoo.assistant.skills.tasks.reminder import ReminderTracker
 from zoo.assistant.skills.tasks.streak_tracker import StreakTracker, Task
 
 
 def main():
     context = yield ContextRequest()
-    reminder = ReminderList.with_presets(f"{os.environ.get('REMINDERS_PATH')}_{context.user_id}.csv")
+    reminder = ReminderTracker.from_file(f"{os.environ.get('REMINDERS_PATH')}_{context.user_id}.csv")
     streak_tracker = StreakTracker([])
     streak_tracker.load_from_file(get_streak_file_path(context.user_id))
     timer_state = False

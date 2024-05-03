@@ -20,45 +20,60 @@ class TimeProvider:
 
 
 class Reminder:
-    def __init__(self, message, times, time_provider):
+    whole_week = [0, 1, 2, 3, 4, 5, 6]
+
+    def __init__(self, message, times, days=None):
         self.message = message
-        self.times = sorted([time_provider.time_to_timedelta(time) for time in times])
-        self.checked_times = set()
-        self.time_provider = time_provider
-
-    def get_reminder(self, delta_minutes: int = 5) -> str | None:
-        if self.time_provider.is_time_within_delta(
-                self.times[-1] + timedelta(minutes=2 * delta_minutes),
-                delta_minutes):
-            self.checked_times.clear()
-
-        for time in self.times:
-            if self.time_provider.is_time_within_delta(time, delta_minutes) and time not in self.checked_times:
-                self.checked_times.add(time)
-                return self.message
-        return None
+        self.times = [TimeProvider.time_to_timedelta(time) for time in times]
+        self.days = days or self.whole_week
 
 
-class ReminderList:
+class ReminderTracker:
     def __init__(self, reminders, time_provider):
         self.reminders = reminders
         self.time_provider = time_provider
+        self.time_table = self._get_time_table()
 
     @staticmethod
-    def with_presets(file_path: str):
+    def from_file(file_path: str):
         time_provider = TimeProvider()
         reminders = []
         with open(file_path, 'r') as file:
             for line in file:
-                message, times = line.strip().split(';')
+                message, times, days = line.strip().split(';')
                 times = times.split(',')
-                reminders.append(Reminder(message, times, time_provider))
-        return ReminderList(reminders, time_provider)
-
-    def add_reminder(self, message: str, times: [str]) -> None:
-        self.reminders.append(Reminder(message, times, self.time_provider))
+                days = days.split(',')
+                reminders.append(Reminder(message, times, days))
+        return ReminderTracker(reminders, time_provider)
 
     def get_reminders(self, delta_minutes: int = 5) -> str | None:
-        messages = [reminder.get_reminder(delta_minutes) for reminder in self.reminders]
-        messages = [msg for msg in messages if msg is not None]
+        matched_reminders = []
+        used_times = []
+        for (time, reminders) in self.time_table.items():
+            if self.time_provider.is_time_within_delta(time, delta_minutes):
+                matched_reminders.extend(reminders)
+                used_times.append(time)
+        self._refresh_time_table_if_needed(used_times, delta_minutes)
+
+        messages = [reminder.message for reminder in matched_reminders]
         return os.linesep.join(messages) if messages else None
+
+    def _get_time_table(self):
+        time_table = {}
+        today_reminders = [reminder for reminder in self.reminders if
+                           self.time_provider.now().weekday() in reminder.days]
+        for reminder in today_reminders:
+            for time in reminder.times:
+                if time not in time_table:
+                    time_table[time] = [reminder]
+                else:
+                    time_table[time].append(reminder)
+        return time_table
+
+    def _refresh_time_table_if_needed(self, used_times, delta_minutes: int):
+        min_time = min([time for reminder in self.reminders for time in reminder.times])
+        if self.time_provider.is_time_within_delta(min_time - timedelta(minutes=2 * delta_minutes), delta_minutes):
+            self.time_table = self._get_time_table()
+        else:
+            for time in used_times:
+                self.time_table.pop(time)
