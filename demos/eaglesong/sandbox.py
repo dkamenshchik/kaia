@@ -8,7 +8,7 @@ from zoo.assistant.skills.tasks.streak_tracker import StreakTracker, Task
 
 def main():
     context = yield ContextRequest()
-    reminder = ReminderTracker.from_file(f"{os.environ.get('REMINDERS_PATH')}_{context.user_id}.csv")
+    reminder_tracker = ReminderTracker.from_file(f"{os.environ.get('REMINDERS_PATH')}_{context.user_id}.csv")
     streak_tracker = StreakTracker([])
     streak_tracker.load_from_file(get_streak_file_path(context.user_id))
     timer_state = False
@@ -18,7 +18,7 @@ def main():
     while True:
         if isinstance(input, TimerTick):
             if timer_state:
-                msg = reminder.get_reminders()
+                msg = reminder_tracker.get_reminders()
                 if msg is not None:
                     yield msg
             input = yield Listen()

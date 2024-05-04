@@ -20,12 +20,12 @@ class TimeProvider:
 
 
 class Reminder:
-    whole_week = [0, 1, 2, 3, 4, 5, 6]
+    _whole_week = [0, 1, 2, 3, 4, 5, 6]
 
     def __init__(self, message, times, days=None):
         self.message = message
         self.times = [TimeProvider.time_to_timedelta(time) for time in times]
-        self.days = days or self.whole_week
+        self.days = days or self._whole_week
 
 
 class ReminderTracker:
@@ -42,7 +42,7 @@ class ReminderTracker:
             for line in file:
                 message, times, days = line.strip().split(';')
                 times = times.split(',')
-                days = days.split(',')
+                days = [int(day) for day in days.split(',')] if days else None
                 reminders.append(Reminder(message, times, days))
         return ReminderTracker(reminders, time_provider)
 
