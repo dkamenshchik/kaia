@@ -1,31 +1,9 @@
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-
-class TimeProvider:
-    @staticmethod
-    def now():
-        return datetime.now()
-
-    @staticmethod
-    def time_to_timedelta(time_str: str) -> timedelta:
-        h, m = map(int, time_str.split(":"))
-        return timedelta(hours=h, minutes=m)
-
-    def is_time_within_delta(self, time: timedelta, delta_minutes: int) -> bool:
-        now = self.now()
-        now_time = timedelta(hours=now.hour, minutes=now.minute, seconds=now.second)
-        diff = (now_time - time).total_seconds() / 60
-        return 0 <= diff <= delta_minutes
-
-
-class Reminder:
-    _whole_week = [0, 1, 2, 3, 4, 5, 6]
-
-    def __init__(self, message, times, days=None):
-        self.message = message
-        self.times = [TimeProvider.time_to_timedelta(time) for time in times]
-        self.days = days or self._whole_week
+from zoo.assistant.skills.tasks.notion_service import NotionService
+from zoo.assistant.skills.tasks.reminder.reminder import Reminder
+from zoo.assistant.skills.tasks.reminder.time_provider import TimeProvider
 
 
 class ReminderTracker:
@@ -40,10 +18,14 @@ class ReminderTracker:
         reminders = []
         with open(file_path, 'r') as file:
             for line in file:
-                message, times, days = line.strip().split(';')
-                times = times.split(',')
-                days = [int(day) for day in days.split(',')] if days else None
-                reminders.append(Reminder(message, times, days))
+                reminder = Reminder.from_str(line)
+                reminders.append(reminder)
+        return ReminderTracker(reminders, time_provider)
+
+    @staticmethod
+    def from_notion(notion_service: NotionService, reminders_page_id: str) -> 'ReminderTracker':
+        reminders = notion_service.get_reminders(reminders_page_id)
+        time_provider = TimeProvider()
         return ReminderTracker(reminders, time_provider)
 
     def get_reminders(self, delta_minutes: int = 5) -> str | None:

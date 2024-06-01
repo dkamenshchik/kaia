@@ -27,6 +27,9 @@ class Task:
         new_dates = self.dates + [date]
         return Task(self.id, self.description, new_dates)
 
+    def is_done_today(self):
+        return datetime.date.today() in self.dates
+
 
 class StreakTracker:
     def __init__(self, tasks: List[Task]):

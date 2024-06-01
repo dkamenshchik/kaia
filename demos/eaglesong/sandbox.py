@@ -1,14 +1,14 @@
 from demos.eaglesong.common import *
 from demos.eaglesong.example_06_auth_4 import Authorize
-from kaia.eaglesong.amenities import menu
-from kaia.eaglesong.amenities.menu import ValueMenuItem, FunctionalMenuItem, MenuFolder
-from zoo.assistant.skills.tasks.reminder import ReminderTracker
-from zoo.assistant.skills.tasks.streak_tracker import StreakTracker, Task
+from kaia.eaglesong.amenities.menu import FunctionalMenuItem, MenuFolder
+from zoo.assistant.skills.tasks.notion_service import NotionService
+from zoo.assistant.skills.tasks.reminder.reminder_tracker import ReminderTracker
+from zoo.assistant.skills.tasks.streak_tracker import StreakTracker
 
 
 def main():
     context = yield ContextRequest()
-    reminder_tracker = ReminderTracker.from_file(f"{os.environ.get('REMINDERS_PATH')}_{context.user_id}.csv")
+    reminder_tracker = get_reminder_tracker(context)
     streak_tracker = StreakTracker([])
     streak_tracker.load_from_file(get_streak_file_path(context.user_id))
     timer_state = False
@@ -59,10 +59,22 @@ def create_menu(streak_tracker: StreakTracker, user_id: str):
         for task in streak_tracker.get_tasks()]
     menu_items.append(FunctionalMenuItem(
         'Print streaks',
-        lambda: (yield os.linesep.join([f'{task.description}: {task.streak}' for task in streak_tracker.get_tasks()])),
+        lambda: (yield os.linesep.join([f'{task.description}: {task.streak} {("✔️" if task.is_done_today() else "")}'
+                                        for task in streak_tracker.get_tasks()])),
         True))
 
     return MenuFolder('Streak').items(*menu_items)
+
+
+def get_reminder_tracker(context):
+    notion_token = os.environ.get(f"NOTION_TOKEN_{context.user_id}")
+    if notion_token:
+        notion_service = NotionService(notion_token)
+        return ReminderTracker.from_notion(
+            notion_service,
+            os.environ.get(f"NOTION_REMINDERS_PAGE_ID_{context.user_id}"))
+
+    return ReminderTracker.from_file(f"{os.environ.get('REMINDERS_PATH')}_{context.user_id}.csv")
 
 
 def get_streak_file_path(user_id: str):
