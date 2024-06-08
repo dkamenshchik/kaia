@@ -9,15 +9,19 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+bin/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
+etc/
+include/
 lib/
-lib64/
+lib64
 parts/
 sdist/
+share/
 var/
 wheels/
 pip-wheel-metadata/
@@ -83,6 +87,7 @@ ipython_config.py
 
 # pyenv
 .python-version
+pyvenv.cfg
 
 # pipenv
 #   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
@@ -136,6 +141,7 @@ environment.env
 temp/
 externals/
 data/
+
 
 
 .dockerignore
