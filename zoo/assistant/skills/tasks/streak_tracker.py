@@ -1,34 +1,9 @@
 import csv
 import datetime
-import os
 from typing import List
 
-
-class Task:
-    def __init__(self, id: int, description: str, dates: List[datetime.date]):
-        self.id = id
-        self.description = description
-        self.dates = list(set(dates))
-        self.streak = self.calculate_streak()
-
-    def calculate_streak(self):
-        self.dates.sort()
-        if len(self.dates) <= 1:
-            return len(self.dates)
-        streak = 1
-        for date1, date2 in zip(self.dates, self.dates[1:]):
-            if date2 - date1 == datetime.timedelta(days=1):
-                streak += 1
-            else:
-                streak = 1
-        return streak
-
-    def add_date(self, date: datetime.date):
-        new_dates = self.dates + [date]
-        return Task(self.id, self.description, new_dates)
-
-    def is_done_today(self):
-        return datetime.date.today() in self.dates
+from zoo.assistant.skills.tasks.notion_service import NotionService
+from zoo.assistant.skills.tasks.task import Task
 
 
 class StreakTracker:
@@ -38,27 +13,53 @@ class StreakTracker:
     def get_tasks(self) -> [Task]:
         return list(self.tasks.values())
 
-    def recalculate_streak(self, task_id: int):
+    def recalculate_streak(self, task_id: int) -> int:
         if task_id in self.tasks:
             new_task = self.tasks[task_id].add_date(datetime.date.today())
             self.tasks[task_id] = new_task
             return new_task.streak
 
-    def save_to_file(self, filename: str):
-        with open(filename, 'w', newline='') as f:
+    def save(self) -> None:
+        pass
+
+
+class NotionStreakTracker(StreakTracker):
+    def __init__(self, tasks: List[Task], notion_service: NotionService, streaks_page_id: str):
+        super().__init__(tasks)
+        self.notion_service = notion_service
+        self.streaks_page_id = streaks_page_id
+
+    def save(self) -> None:
+        self.save_to_notion()
+
+    def save_to_notion(self) -> None:
+        self.notion_service.save_streaks(self.streaks_page_id, self.get_tasks())
+
+    @staticmethod
+    def from_notion(notion_service: NotionService, streaks_page_id: str) -> 'StreakTracker':
+        tasks = notion_service.get_streaks(streaks_page_id)
+        return NotionStreakTracker(tasks, notion_service, streaks_page_id)
+
+
+class FileStreakTracker(StreakTracker):
+    def __init__(self, tasks: List[Task], filename: str):
+        super().__init__(tasks)
+        self.filename = filename
+
+    @staticmethod
+    def from_file(filename: str) -> 'StreakTracker':
+        with open(filename, 'r') as f:
+            reader = csv.reader(f)
+            next(reader)
+            tasks = [Task.from_str(','.join(row)) for row in reader]
+            return FileStreakTracker(tasks, filename)
+
+    def save(self) -> None:
+        self.save_to_file()
+
+    def save_to_file(self) -> None:
+        with open(self.filename, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['id', 'description', 'dates'])
             for task in self.get_tasks():
                 writer.writerow([task.id, task.description, ';'.join(map(str, task.dates))])
-
-    def load_from_file(self, filename: str):
-        with open(filename, 'r') as f:
-            reader = csv.reader(f)
-            next(reader)
-            self.tasks = {
-                int(row[0]): Task(
-                    int(row[0]),
-                    row[1],
-                    [] if not row[2] else list(map(datetime.date.fromisoformat, filter(None, row[2].split(';'))))
-                )
-                for row in reader}
