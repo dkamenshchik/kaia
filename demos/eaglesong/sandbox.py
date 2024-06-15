@@ -1,5 +1,3 @@
-import os as os1
-
 from demos.eaglesong.common import *
 from demos.eaglesong.example_06_auth_4 import Authorize
 from kaia.eaglesong.amenities.menu import FunctionalMenuItem, MenuFolder
@@ -49,6 +47,8 @@ def main():
 def update_streak(task, streak_tracker: StreakTracker):
     new_streak = streak_tracker.recalculate_streak(task.id)
     yield f'{task.description} streak is {new_streak}'
+    if all([task.is_done_today() for task in streak_tracker.get_tasks()]):
+        yield f'Great job! You have completed all tasks today! 🎉🎉🎉'
     streak_tracker.save()
 
 
